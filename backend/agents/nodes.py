@@ -50,7 +50,7 @@ async def classify_issue(state: Dict[str, Any]) -> Dict[str, Any]:
     
     try:
         # Real LLM classification
-        llm = ChatOpenAI(model="gpt-5-nano", temperature=0)
+        llm = ChatOpenAI(model="gpt-4o-mini")
         
         prompt = ChatPromptTemplate.from_messages([
             ("system", """You are an expert at triaging software engineering issues.
@@ -149,7 +149,7 @@ This is a mock response for testing purposes. Configure OPENAI_API_KEY for real 
     
     try:
         # Real LLM generation
-        llm = ChatOpenAI(model="gpt-5-nano", temperature=0.7)
+        llm = ChatOpenAI(model="gpt-4o-mini")
         
         # Build context string
         context_str = "\n\n".join([
