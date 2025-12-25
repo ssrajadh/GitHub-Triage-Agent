@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 # Check if OpenAI API key is available
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-HAS_OPENAI = bool(OPENAI_API_KEY) and OPENAI_API_KEY != "sk-your-key-here"
+HAS_OPENAI = bool(OPENAI_API_KEY)
 
 if HAS_OPENAI:
     try:

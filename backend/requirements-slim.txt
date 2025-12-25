@@ -1,0 +1,32 @@
+# Slim requirements for faster Docker builds
+# Use this for development: docker build --build-arg REQUIREMENTS=requirements-slim.txt
+
+# Core Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+websockets==12.0
+
+# LangChain & LangGraph - Core only
+langchain>=0.1.0
+langchain-openai>=0.0.8
+langgraph>=0.0.20
+
+# Vector Database - ChromaDB only
+chromadb==0.4.22
+tiktoken>=0.5.2
+
+# GitHub Integration
+PyGithub==2.1.1
+
+# Environment & Configuration
+python-dotenv==1.0.0
+pydantic>=2.7.0
+pydantic-settings==2.1.0
+
+# HTTP & API
+httpx>=0.26.0
+requests==2.31.0
+
+# CORS
+python-jose[cryptography]==3.3.0

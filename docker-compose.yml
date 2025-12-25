@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: triage-agent-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - ENVIRONMENT=production
+    volumes:
+      - ./backend:/app
+      - ./backend/chroma_db:/app/chroma_db
+      - backend-cache:/root/.cache
+    networks:
+      - triage-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: triage-agent-frontend
+    ports:
+      - "5173:80"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_WS_URL=ws://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - triage-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: triage-agent-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - triage-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: triage-agent-ngrok
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    command: http backend:8000
+    ports:
+      - "4040:4040"  # ngrok web interface
+    depends_on:
+      - backend
+    networks:
+      - triage-network
+    restart: unless-stopped
+
+volumes:
+  backend-cache:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  triage-network:
+    driver: bridge
