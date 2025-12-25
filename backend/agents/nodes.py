@@ -50,7 +50,7 @@ async def classify_issue(state: Dict[str, Any]) -> Dict[str, Any]:
     
     try:
         # Real LLM classification
-        llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
+        llm = ChatOpenAI(model="gpt-5-nano", temperature=0)
         
         prompt = ChatPromptTemplate.from_messages([
             ("system", """You are an expert at triaging software engineering issues.
@@ -64,13 +64,16 @@ Respond with ONLY one word: BUG, FEATURE, or QUESTION"""),
         ])
         
         chain = prompt | llm
+        logger.info("Invoking LLM for classification...")
         response = await chain.ainvoke({
             "title": issue_title,
-            "body": issue_body[:1000]  # Limit body length
+            "body": (issue_body or "")[:1000]  # Limit body length, handle None
         })
+        logger.info(f"LLM response type: {type(response)}, content: {response}")
         
         # Handle None response
         if response is None or not hasattr(response, 'content'):
+            logger.error(f"LLM returned invalid response: {response}")
             raise ValueError("LLM returned no response")
         
         classification = response.content.strip().upper()
@@ -83,7 +86,7 @@ Respond with ONLY one word: BUG, FEATURE, or QUESTION"""),
         logger.info(f"LLM classification: {classification}")
         
     except Exception as e:
-        logger.error(f"Error in classify_issue: {str(e)}")
+        logger.error(f"Error in classify_issue: {str(e)}", exc_info=True)
         state["classification"] = "QUESTION"  # Safe default
     
     return state
@@ -146,7 +149,7 @@ This is a mock response for testing purposes. Configure OPENAI_API_KEY for real 
     
     try:
         # Real LLM generation
-        llm = ChatOpenAI(model="gpt-4", temperature=0.7)
+        llm = ChatOpenAI(model="gpt-5-nano", temperature=0.7)
         
         # Build context string
         context_str = "\n\n".join([
@@ -215,26 +218,29 @@ Generate a helpful, professional response that:
 Keep the response concise (under 300 words) and informative."""
 
         prompt = ChatPromptTemplate.from_messages([
+            ("system", "You are a helpful engineering assistant."),
+            ("user", prompt_template)
+        ])
+        
         chain = prompt | llm
+        logger.info("Invoking LLM for solution generation...")
         response = await chain.ainvoke({
             "title": issue_title,
-            "body": issue_body[:2000],  # Limit length
+            "body": (issue_body or "")[:2000],  # Limit length, handle None
             "context": context_str if context_str else "No specific documentation found."
         })
+        logger.info(f"LLM response type: {type(response)}, has content: {hasattr(response, 'content') if response else False}")
         
         # Handle None response
         if response is None or not hasattr(response, 'content'):
+            logger.error(f"LLM returned invalid response: {response}")
             raise ValueError("LLM returned no response")
-        
-        state["draft_response"] = response.content
-        logger.info("Generated LLM response")_str else "No specific documentation found."
-        })
         
         state["draft_response"] = response.content
         logger.info("Generated LLM response")
         
     except Exception as e:
-        logger.error(f"Error in generate_solution: {str(e)}")
+        logger.error(f"Error in generate_solution: {str(e)}", exc_info=True)
         state["draft_response"] = f"""## Error Generating Response
 
 We encountered an issue while processing your request: {str(e)}
