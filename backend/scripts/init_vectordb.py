@@ -27,7 +27,7 @@ from chromadb.config import Settings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 # Configure logging
 logging.basicConfig(
@@ -237,6 +237,8 @@ class RepositoryIndexer:
         """
         Index documents into ChromaDB vector store.
         
+        Processes documents in batches to avoid OpenAI API token limits.
+        
         Args:
             documents: List of Document objects to index
             
@@ -245,14 +247,55 @@ class RepositoryIndexer:
         """
         logger.info(f"Indexing {len(documents)} documents into ChromaDB...")
         
-        # Create or load vector store
-        vectorstore = Chroma.from_documents(
-            documents=documents,
-            embedding=self.embeddings,
-            persist_directory=self.persist_directory,
-            collection_name=self.collection_name,
-            collection_metadata={"hnsw:space": "cosine"}  # Use cosine similarity
-        )
+        # Batch size: process 100 documents at a time to avoid token limits
+        # OpenAI has a 300k token limit per request, so we use a conservative batch size
+        batch_size = 100
+        
+        # Check if collection already exists and delete it to start fresh
+        if os.path.exists(self.persist_directory):
+            try:
+                client = chromadb.PersistentClient(path=self.persist_directory)
+                try:
+                    existing_collection = client.get_collection(self.collection_name)
+                    client.delete_collection(self.collection_name)
+                    logger.info(f"Deleted existing collection: {self.collection_name}")
+                except Exception:
+                    pass  # Collection doesn't exist, which is fine
+            except Exception as e:
+                logger.warning(f"Could not clean existing collection: {e}")
+        
+        # Process documents in batches
+        total_batches = (len(documents) + batch_size - 1) // batch_size
+        vectorstore = None
+        
+        for i in range(0, len(documents), batch_size):
+            batch = documents[i:i + batch_size]
+            batch_num = (i // batch_size) + 1
+            
+            logger.info(f"Processing batch {batch_num}/{total_batches} ({len(batch)} documents)...")
+            
+            try:
+                if vectorstore is None:
+                    # Create vector store with first batch
+                    vectorstore = Chroma.from_documents(
+                        documents=batch,
+                        embedding=self.embeddings,
+                        persist_directory=self.persist_directory,
+                        collection_name=self.collection_name,
+                        collection_metadata={"hnsw:space": "cosine"}
+                    )
+                else:
+                    # Add subsequent batches to existing vector store
+                    vectorstore.add_documents(batch)
+                
+                logger.info(f"✓ Batch {batch_num}/{total_batches} indexed successfully")
+            except Exception as e:
+                logger.error(f"Error indexing batch {batch_num}: {e}")
+                # Continue with next batch even if one fails
+                continue
+        
+        if vectorstore is None:
+            raise ValueError("Failed to create vector store - no documents were indexed")
         
         logger.info(f"Successfully indexed documents into: {self.persist_directory}")
         return vectorstore

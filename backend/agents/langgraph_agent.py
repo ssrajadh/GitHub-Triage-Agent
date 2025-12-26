@@ -33,17 +33,16 @@ def route_after_classification(state: AgentState) -> str:
     """
     Router function for conditional edges after classification
     
+    All issue types use RAG to retrieve relevant context from documentation.
+    
     Returns:
-        Next node name based on classification
+        Next node name (always retrieve_context for all classifications)
     """
     classification = state.get("classification")
     
-    if classification in ["BUG", "QUESTION"]:
-        logger.info(f"Routing {classification} to retrieve_context")
-        return "retrieve_context"
-    else:
-        logger.info(f"Routing {classification} directly to generate_solution")
-        return "generate_solution"
+    # All classifications should use RAG for context-aware responses
+    logger.info(f"Routing {classification} to retrieve_context for RAG")
+    return "retrieve_context"
 
 
 async def classify_node(state: AgentState) -> AgentState:
@@ -118,8 +117,9 @@ async def process_issue_with_agent(
     Process issue through LangGraph state machine
     
     Graph structure:
-    START → classify → [BUG/QUESTION] → retrieve_context → generate_solution → END
-                    → [FEATURE] → generate_solution → END
+    START → classify → retrieve_context → generate_solution → END
+    
+    All issue types use RAG to retrieve relevant documentation context.
     
     Args:
         initial_state: Initial state dictionary with issue details

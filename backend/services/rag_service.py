@@ -4,6 +4,7 @@ Vector database operations for context retrieval
 """
 import logging
 import os
+from pathlib import Path
 from typing import List
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ if HAS_OPENAI and HAS_CHROMA:
         HAS_OPENAI = False
 
 
-async def search_relevant_context(query: str, top_k: int = 5) -> List[str]:
+async def search_relevant_context(query: str, top_k: int = 10) -> List[str]:
     """
     Search vector database for relevant context
     
@@ -49,7 +50,21 @@ async def search_relevant_context(query: str, top_k: int = 5) -> List[str]:
         ]
     
     try:
-        persist_directory = os.getenv("CHROMA_PERSIST_DIRECTORY", "./chroma_db")
+        # Resolve path relative to backend directory (where this file is located)
+        backend_dir = Path(__file__).parent.parent
+        default_path = backend_dir / "chroma_db"
+        
+        env_path = os.getenv("CHROMA_PERSIST_DIRECTORY")
+        if env_path:
+            # If env var is set, resolve it (could be absolute or relative)
+            persist_directory = Path(env_path)
+            if not persist_directory.is_absolute():
+                # If relative, resolve from backend directory
+                persist_directory = backend_dir / persist_directory
+            persist_directory = str(persist_directory.resolve())
+        else:
+            # Use default path (already absolute from backend_dir)
+            persist_directory = str(default_path.resolve())
         
         # Check if database exists
         if not os.path.exists(persist_directory):
@@ -58,18 +73,36 @@ async def search_relevant_context(query: str, top_k: int = 5) -> List[str]:
         
         # Initialize embeddings and vector store
         embeddings = OpenAIEmbeddings()
+        collection_name = os.getenv("CHROMA_COLLECTION_NAME", "repository_docs")
         vectorstore = Chroma(
             persist_directory=persist_directory,
-            embedding_function=embeddings
+            embedding_function=embeddings,
+            collection_name=collection_name
         )
         
-        # Perform similarity search
+        # Perform similarity search with metadata filtering to get diverse results
         results = vectorstore.similarity_search(query, k=top_k)
         
-        # Extract text from results
-        context_chunks = [doc.page_content for doc in results]
+        # Extract text from results with source information
+        context_chunks = []
+        seen_sources = set()
         
-        logger.info(f"Retrieved {len(context_chunks)} chunks from vector database")
+        for doc in results:
+            # Include source file path if available in metadata
+            source = doc.metadata.get('source', 'unknown')
+            chunk_text = doc.page_content
+            
+            # Prepend source info to help LLM understand context
+            if source != 'unknown':
+                context_chunks.append(f"[From: {source}]\n{chunk_text}")
+                seen_sources.add(source)
+            else:
+                context_chunks.append(chunk_text)
+        
+        logger.info(f"Retrieved {len(context_chunks)} chunks from {len(seen_sources)} unique files")
+        if context_chunks and results:
+            sample_sources = [doc.metadata.get('source', 'unknown') for doc in results[:5]]
+            logger.info(f"Top sources: {sample_sources}")
         return context_chunks
         
     except Exception as e:
@@ -83,7 +116,22 @@ def get_vectorstore_stats() -> dict:
         return {"error": "ChromaDB not available"}
     
     try:
-        persist_directory = os.getenv("CHROMA_PERSIST_DIRECTORY", "./chroma_db")
+        # Resolve path relative to backend directory (where this file is located)
+        backend_dir = Path(__file__).parent.parent
+        default_path = backend_dir / "chroma_db"
+        collection_name = os.getenv("CHROMA_COLLECTION_NAME", "repository_docs")
+        
+        env_path = os.getenv("CHROMA_PERSIST_DIRECTORY")
+        if env_path:
+            # If env var is set, resolve it (could be absolute or relative)
+            persist_directory = Path(env_path)
+            if not persist_directory.is_absolute():
+                # If relative, resolve from backend directory
+                persist_directory = backend_dir / persist_directory
+            persist_directory = str(persist_directory.resolve())
+        else:
+            # Use default path (already absolute from backend_dir)
+            persist_directory = str(default_path.resolve())
         
         if not os.path.exists(persist_directory):
             return {"error": "Database not initialized"}
@@ -93,7 +141,8 @@ def get_vectorstore_stats() -> dict:
         
         stats = {
             "collections": len(collections),
-            "details": []
+            "details": [],
+            "active_collection": collection_name
         }
         
         for collection in collections:
@@ -101,6 +150,11 @@ def get_vectorstore_stats() -> dict:
                 "name": collection.name,
                 "count": collection.count()
             })
+        
+        # Check if the active collection exists
+        collection_names = [c.name for c in collections]
+        if collection_name not in collection_names:
+            stats["warning"] = f"Collection '{collection_name}' not found. Available: {collection_names}"
         
         return stats
         
