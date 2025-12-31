@@ -1,8 +1,8 @@
-# GitHub Triage Agent (ChatOps Edition)
+# GitHub Triage Agent
 
 An intelligent AI agent that automatically triages GitHub issues and proposes solutions using ChatOps commands.
 
-## 🚀 Overview
+## Overview
 
 The GitHub Triage Agent monitors your repository for new issues, analyzes them using LangGraph + RAG, and posts draft responses directly as GitHub comments. Maintainers interact with the bot using simple slash commands without leaving GitHub.
 
@@ -14,7 +14,7 @@ The GitHub Triage Agent monitors your repository for new issues, analyzes them u
 - **No Frontend Required**: Zero context switching, works on mobile
 - **Production Ready**: Docker Compose setup with ngrok integration
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 GitHub Issue Created
@@ -34,14 +34,14 @@ Maintainer Commands:
     • /reject    → Delete comment
 ```
 
-## 📦 Prerequisites
+## Prerequisites
 
 - Docker & Docker Compose
 - OpenAI API Key ([Get one here](https://platform.openai.com/api-keys))
 - GitHub Personal Access Token with `repo` scope
 - Python 3.13+ (for local development)
 
-## ⚡ Quick Start
+## Quick Start
 
 ### 1. Clone Repository
 
@@ -105,8 +105,6 @@ Or visit: http://localhost:4040
 5. **Events**: Select "Issues" and "Issue comments"
 6. Click "Add webhook"
 
-## 🎯 Usage
-
 ### Creating an Issue
 
 1. Create a new issue in your repository
@@ -114,7 +112,7 @@ Or visit: http://localhost:4040
 3. Bot posts a draft response:
 
 ```markdown
-🤖 **Draft Response** (not yet approved)
+**Draft Response** (not yet approved)
 
 Based on the error message, this appears to be a race condition in the 
 telemetry buffering system. The issue occurs when multiple threads access
@@ -156,7 +154,7 @@ Reply to delete the bot's comment:
 /reject
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 GitHub-Triage-Agent/
@@ -179,14 +177,14 @@ GitHub-Triage-Agent/
 └── notes.md
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Environment Variables
 
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `OPENAI_API_KEY` | OpenAI API key for GPT models | ✅ |
-| `GITHUB_TOKEN` | GitHub PAT with `repo` scope | ✅ |
+| `GITHUB_TOKEN` | GitHub PAT with `repo` scope (from bot account or GitHub App) | ✅ |
 | `GITHUB_WEBHOOK_SECRET` | Secret for webhook signature verification | ✅ |
 | `CHROMA_PERSIST_DIRECTORY` | Path to ChromaDB storage | ❌ (default: `./chroma_db`) |
 | `API_HOST` | Backend host address | ❌ (default: `0.0.0.0`) |
@@ -200,7 +198,7 @@ Edit `backend/agents/nodes.py` to customize:
 - **RAG Retrieval**: Adjust top-k results or reranking logic
 - **Solution Generation**: Modify GPT-4 system prompts
 
-## 🧪 Testing
+## Testing
 
 ### Manual Testing
 
@@ -217,106 +215,3 @@ curl -X POST http://localhost:8000/test/parse-command \
   -d '{"comment_body": "/approve"}'
 ```
 
-### Unit Tests
-
-```bash
-cd backend
-pytest tests/ -v
-```
-
-## 🚀 Production Deployment
-
-### Recommended Stack
-
-- **Hosting**: AWS ECS, Google Cloud Run, or DigitalOcean App Platform
-- **Database**: Managed Redis (AWS ElastiCache, Redis Cloud)
-- **Secrets**: AWS Secrets Manager or HashiCorp Vault
-- **Monitoring**: Prometheus + Grafana
-
-### Environment Variables for Production
-
-```env
-# Replace ngrok with your domain
-WEBHOOK_URL=https://api.yourdomain.com/webhook/github
-
-# Use managed Redis
-REDIS_URL=redis://your-redis-instance:6379
-
-# Enable production mode
-ENVIRONMENT=production
-LOG_LEVEL=INFO
-```
-
-### SSL & Reverse Proxy
-
-Use Nginx or Traefik for SSL termination:
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name api.yourdomain.com;
-
-    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
-
-    location / {
-        proxy_pass http://backend:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-```
-
-## 🐛 Troubleshooting
-
-### Bot Not Responding to Issues
-
-1. Check webhook delivery in GitHub Settings → Webhooks → Recent Deliveries
-2. Verify ngrok is running: `curl http://localhost:4040/api/tunnels`
-3. Check backend logs: `docker-compose logs -f backend`
-
-### Commands Not Working
-
-1. Ensure webhook listens for "Issue comments" events
-2. Verify command syntax (e.g., `/revise "text"` needs quotes)
-3. Check bot can write to repository (PAT permissions)
-
-### Docker Build Slow
-
-```bash
-# Use lighter requirements (remove dev dependencies)
-pip install --no-cache-dir -r requirements.txt
-
-# Or use pre-built image
-docker pull yourusername/github-triage-agent:latest
-```
-
-## 📚 Documentation
-
-- [Architecture Deep Dive](notes.md)
-- [LangGraph State Machine](backend/agents/README.md)
-- [RAG Implementation](backend/services/README.md)
-- [API Reference](docs/API.md)
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open Pull Request
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file
-
-## 🙏 Acknowledgments
-
-- **LangChain**: LLM orchestration framework
-- **LangGraph**: State machine architecture
-- **ChromaDB**: Vector database for RAG
-- **FastAPI**: High-performance async web framework
-
----
-
-**Need Help?** Open an issue or contact [@yourusername](https://github.com/yourusername)

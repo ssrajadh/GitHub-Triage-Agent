@@ -66,7 +66,10 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "tracked_issues": len(bot_comments_db)
+        "tracked_issues": len(bot_comments_db),
+        "has_github_token": bool(os.getenv("GITHUB_TOKEN")),
+        "has_openai_key": bool(os.getenv("OPENAI_API_KEY")),
+        "has_webhook_secret": bool(os.getenv("GITHUB_WEBHOOK_SECRET"))
     }
 
 
@@ -157,13 +160,18 @@ async def get_stats():
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("API_PORT", 8000))
+    # Cloud Run sets PORT env var automatically
+    # Fallback to API_PORT for local development, then default to 8000
+    port = int(os.getenv("PORT", os.getenv("API_PORT", 8000)))
     host = os.getenv("API_HOST", "0.0.0.0")
+    
+    # Disable reload in production (Cloud Run)
+    reload = os.getenv("ENVIRONMENT") != "production"
     
     uvicorn.run(
         "main:app",
         host=host,
         port=port,
-        reload=True,
+        reload=reload,
         log_level="info"
     )

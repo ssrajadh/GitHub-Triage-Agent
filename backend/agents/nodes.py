@@ -34,9 +34,11 @@ async def classify_issue(state: Dict[str, Any]) -> Dict[str, Any]:
     issue_body = state.get("issue_body", "")
     
     logger.info(f"Classifying issue: {issue_title}")
+    logger.info(f"HAS_OPENAI: {HAS_OPENAI}, OPENAI_API_KEY set: {bool(OPENAI_API_KEY)}")
     
     if not HAS_OPENAI:
         # Mock classification for testing
+        logger.info("Using mock classification (OpenAI not available)")
         if "bug" in issue_title.lower() or "error" in issue_title.lower():
             classification = "BUG"
         elif "feature" in issue_title.lower() or "add" in issue_title.lower():
@@ -49,8 +51,10 @@ async def classify_issue(state: Dict[str, Any]) -> Dict[str, Any]:
         return state
     
     try:
+        logger.info("Initializing ChatOpenAI for classification...")
         # Real LLM classification
         llm = ChatOpenAI(model="gpt-4o-mini")
+        logger.info("ChatOpenAI initialized successfully")
         
         prompt = ChatPromptTemplate.from_messages([
             ("system", """You are an expert at triaging software engineering issues.

@@ -1,0 +1,48 @@
+# This file specifies files that are *not* uploaded to Google Cloud
+# using gcloud. It follows the same syntax as .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation
+*.md
+docs/
+CLOUD_RUN_DEPLOYMENT.md
+BOT_SETUP.md
+
+# Git
+.git
+.gitignore
+
+# Environment
+.env
+.env.local
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Large directories that shouldn't be uploaded
+# Note: chroma_db/ should be included for Cloud Run
+# venv/ is excluded to reduce upload size
+

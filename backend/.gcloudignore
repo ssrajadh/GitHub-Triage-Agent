@@ -1,0 +1,46 @@
+# This file specifies files that are *not* uploaded to Google Cloud
+# when using gcloud run deploy --source
+# It follows the same syntax as .gitignore
+
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments (CRITICAL - exclude large venv directory)
+venv/
+env/
+ENV/
+.venv
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation (not needed in Docker image)
+*.md
+
+# Git
+.git
+.gitignore
+
+# Environment files (secrets handled via Secret Manager)
+.env
+.env.local
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Note: chroma_db/ is NOT excluded - we need it in the image
+
